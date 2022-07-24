@@ -1,6 +1,5 @@
 def answer(user_msg):
     msg = str(user_msg).lower()
-    result=[]
 
     if msg in ['hello','hi','yo','sup']:
         return "Hello, (wave)"
