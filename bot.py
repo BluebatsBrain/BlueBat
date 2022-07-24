@@ -1,80 +1,78 @@
-from telegram.ext import *
-import SecretKey as key
+from aiogram import Bot, Dispatcher, executor, types
+from SECRETKEY import token
 import Responses as R
-import sys
-import subprocess 
+import subprocess, sys
+import janken
 
+bot = Bot(token)
+dp = Dispatcher(bot)
 
+py=False
 
-print("~~~Bot Starting~~~")
-
-def start_command(update, context):#/start
-    update.message.reply_text('Hi!\nhi👋\n~I am a Blue Bat that does bat stuff')
-
-def help_command(update, context): #/help
-    update.message.reply_text('I am a growing bat\nfor now to require assistance, \nplease contact my caretakers via: helpers_out_of_the_blue@protonmail.com')
-
-def python_output(message):
-    try:
-        print("It entered this stage")
-
-        f= open("program.py", "a")
-        f.truncate(0)
-        f.write(message+"\n")
-        f.close()
-
-        output = subprocess.check_output([sys.executable, './program.py'])
-        tp = open('outfile.txt', 'wb')
-        with tp as outfile:
-            outfile.write(output)
-        tp.close()
-            
-
-    except:
-        sorry= "There was an error\nSorry--Sorry\ni tried my best🙁"
-        update.message.reply_text(sorry)
-
-        print(sorry)
-        print(f"Update {update} caused error {context.error}")
-
-def handle_message(update, context):
-    chat_text = str(update.message.text).lower()
-    response = R.sample_responses(chat_text)
-#Python Output
-    if chat_text[:3] == "#py":
-
-        python_output(update.message.text) 
-
-        rd = open('outfile.txt','r')
-        out = rd.readlines()
-        for line in out:
-            update.message.reply_text(line)
-        rd.close()
-
-
-#Echo
-    if chat_text[:3] != "#py" and response == False:
-        update.message.reply_text(update.message.text)
-        
-#Response
-    elif chat_text[:3] != "#py" and response!= False:
-            update.message.reply_text(response)
-        
-
-
-def error(update, context):
-    print(f"Update {update} caused error {context.error}")
-
-def main():
-    updater = Updater(key.API_KEY, use_context= True)
-    dp = updater.dispatcher
-
-    dp.add_handler(CommandHandler("start", start_command))
-    dp.add_handler(CommandHandler("help", help_command))
+@dp.message_handler(commands=['start'])
+async def welcome(message: types):
+    await message.reply('Hi!\nhi👋\n~I am a Blue Bat that does bat stuff')
     
-    dp.add_handler(MessageHandler(Filters.text, handle_message))
-    dp.add_error_handler(error)
+@dp.message_handler(commands=['help'])
+async def help(message: type):
+    await message.reply('My other commands are: \start \rock \paper \scissors',
+    '\nI am a growing bat\nfor now to require assistance, \nplease contact my caretakers via: helpers_out_of_the_blue@protonmail.com')
 
-    updater.start_polling()
-    updater.idle()
-main()
+@dp.message_handler(commands=['python'])
+async def code(message: type):
+    global py
+    py=True
+    await message.reply("Okay u can send python code now")
+
+@dp.message_handler(commands=['notpython'])
+async def code(message: type):
+    global py
+    py=False
+    await message.reply("Okay u can stop sending python code now")
+
+@dp.message_handler(commands=['rock','paper','scissors'])
+async def game(message: type):
+    result = janken.letsPlay(message.text[1:])
+    await message.reply(result)
+
+@dp.message_handler()
+async def responses(message: types.Message):
+    text = (message.text).lower()
+
+    global py
+    if py == True:
+        try:
+            f= open("program.py", "a")
+            f.truncate(0)
+            f.write(message.text+"\n")
+            f.close()
+
+            output = subprocess.check_output([sys.executable, './program.py'])
+            tp = open('outfile.txt', 'wb')
+            with tp as outfile:
+                outfile.write(output)
+            tp.close()
+
+            rd = open('outfile.txt','r')
+            out = rd.readlines()
+            for line in out:
+                await message.reply(line)
+            rd.close()
+            return
+        except:
+            await message.text('There was an error\nSorry--Sorry\ni tried my best🙁')
+            py = False
+            return
+    
+
+    elif text in ['rock','paper','scissors']:
+        result= janken.letsPlay(text)   
+        await message.reply(result)
+        return
+    
+    await message.reply(R.answer(message.text))
+        
+        
+if __name__ == '__main__':
+    print('~\(^~^)/~')
+    executor.start_polling(dp)
